@@ -16,7 +16,7 @@ def put(name, snippet):
 
     Returns the name and the snippet
     """
-    logging.info("Storing snippet {!r}: {!r}".format(name, snippet))
+    logging.info("Storing snippet {}: {}".format(name, snippet))
     with connection, connection.cursor() as cursor:
         
         try:
@@ -44,11 +44,27 @@ def get(name):
          #No snippet was found with that name.
             return "404: Snippet Not Found"
         
-        else:
-            return row[0]
+
+        return row[0]
     
+def catalog():
+    #List of snippet-names that can be used to search for snippets in the get function
     
-    
+    logging.info("Listing snippets")
+    with connection, connection.cursor() as cursor:
+        cursor.execute("select keyword from snippets order by keyword")
+        rows = cursor.fetchall()
+        return rows
+
+def search(name):
+   #searches for snippets where messages contain inputted string
+   logging.info("Searching for snippet")
+   with connection, connection.cursor() as cursor:
+       cursor.execute("select * from snippets where message like '%{}%'".format(name, ))
+       rows = cursor.fetchall()
+       if not rows:
+           return "404: string not found in any message"
+   return rows
 
 def main():
     """Main function"""
@@ -68,6 +84,16 @@ def main():
     get_parser = subparsers.add_parser("get", help = "Retreive a snippet")
     get_parser.add_argument("name", help = "Name of the snippet")
     
+    #Subparser for the catalog command
+    logging.debug("Constructing catalog subparser")
+    catalog_parser = subparsers.add_parser("catalog", help = "List of keywords used to get a snippet")
+    
+    #Subparser for search command
+    logging.debug("Searching for string in message")
+    search_parser = subparsers.add_parser("search", help = "searches for string in message")
+    search_parser.add_argument("name", help = "string you want to search for")
+    
+    
     arguments = parser.parse_args()
     
     # Convert parsed arguments from Namespace to dictionary
@@ -80,6 +106,13 @@ def main():
     elif command == "get":
         snippet = get(**arguments)
         print("Retrieved snippet: {!r}".format(snippet))
-
+    elif command == "catalog":
+        cat = catalog()
+        print("List of snippet-names: {!r} ".format(cat))
+    elif command == "search":
+        sea = search(**arguments)
+        justkeyword = [key[0] for key in sea]
+        print ("The keyword of the snippet whose message contains the inputted string is: {}".format(justkeyword))
+        
 if __name__ == "__main__":
     main()
