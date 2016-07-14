@@ -10,7 +10,7 @@ logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
 
 
 
-def put(name, snippet):
+def put(name, snippet, hide):
     """
     Store a snippet with an associated name.
 
@@ -20,8 +20,8 @@ def put(name, snippet):
     with connection, connection.cursor() as cursor:
         
         try:
-            command = "insert into snippets values (%s, %s)"
-            cursor.execute(command, (name, snippet))
+            command = "insert into snippets values (%s, %s, %s)"
+            cursor.execute(command, (name, snippet, hide))
         except psycopg2.IntegrityError as e:
             connection.rollback()
             command = "update snippets set message=%s where keyword=%s"
@@ -52,7 +52,7 @@ def catalog():
     
     logging.info("Listing snippets")
     with connection, connection.cursor() as cursor:
-        cursor.execute("select keyword from snippets order by keyword")
+        cursor.execute("select keyword from snippets where not hidden")
         rows = cursor.fetchall()
         return rows
 
@@ -60,7 +60,7 @@ def search(name):
    #searches for snippets where messages contain inputted string
    logging.info("Searching for snippet")
    with connection, connection.cursor() as cursor:
-       cursor.execute("select * from snippets where message like '%{}%'".format(name, ))
+       cursor.execute("select * from snippets where message like '%{}%' AND not hidden".format(name, ))
        rows = cursor.fetchall()
        if not rows:
            return "404: string not found in any message"
@@ -78,6 +78,8 @@ def main():
     put_parser = subparsers.add_parser("put", help="Store a snippet")
     put_parser.add_argument("name", help="Name of the snippet")
     put_parser.add_argument("snippet", help="Snippet text")
+    put_parser.add_argument("--hide", help = "Hides snippet from searches/catalog")
+    
     
     # Subparser for the get command
     logging.debug("Constructing get subparser")
@@ -94,6 +96,8 @@ def main():
     search_parser.add_argument("name", help = "string you want to search for")
     
     
+    
+    
     arguments = parser.parse_args()
     
     # Convert parsed arguments from Namespace to dictionary
@@ -101,7 +105,7 @@ def main():
     command = arguments.pop("command")
 
     if command == "put":
-        name, snippet = put(**arguments)
+        name, snippet, hide = put(**arguments)
         print("Stored {!r} as {!r}".format(snippet, name))
     elif command == "get":
         snippet = get(**arguments)
