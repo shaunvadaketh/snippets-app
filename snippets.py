@@ -23,7 +23,7 @@ def put(name, snippet, hidden):
         
         try:
             command = "insert into snippets values (%s, %s, %s)"
-            print(command)
+            
             cursor.execute(command, (name, snippet, hidden))
         except psycopg2.IntegrityError as e:
             connection.rollback()
@@ -80,9 +80,9 @@ def main():
     logging.debug("Constructing put subparser")
     put_parser = subparsers.add_parser("put", help="Store a snippet")
     
-    put_parser.add_argument('--name', action="store", dest="name")
-    put_parser.add_argument('--snippet', action="store", dest="snippet")
-    put_parser.add_argument('--hide', action="store", dest="hidden", default=False)
+    put_parser.add_argument("name", action="store")
+    put_parser.add_argument("snippet", action="store")
+    put_parser.add_argument("--hidden", action="store", default=False)
     # put_parser.add_argument("name", help="Name of the snippet")
     # put_parser.add_argument("snippet", help="Snippet text")
     # put_parser.add_argument("--hide", help = "Hides snippet from searches/catalog", action="store_true")
