@@ -1,6 +1,7 @@
 import logging
 import argparse
 import psycopg2
+import sys
 
 logging.debug("Connecting to PostgreSQL")
 connection = psycopg2.connect(database="snippets")
@@ -10,25 +11,27 @@ logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
 
 
 
-def put(name, snippet, hide):
+def put(name, snippet, hidden):
     """
     Store a snippet with an associated name.
 
     Returns the name and the snippet
     """
+    #import pdb;pdb.set_trace()
     logging.info("Storing snippet {}: {}".format(name, snippet))
     with connection, connection.cursor() as cursor:
         
         try:
             command = "insert into snippets values (%s, %s, %s)"
-            cursor.execute(command, (name, snippet, hide))
+            print(command)
+            cursor.execute(command, (name, snippet, hidden))
         except psycopg2.IntegrityError as e:
             connection.rollback()
-            command = "update snippets set message=%s where keyword=%s"
-            cursor.execute(command, (snippet, name))
+            command = "update snippets set message=%s,hidden=%s where keyword=%s"
+            cursor.execute(command, (snippet, hidden, name))
     
     logging.debug("Snippet stored successfully.")
-    return name, snippet
+    return name, snippet, hidden
 
 def get(name):
     """Retrieve the snippet with a given name.
@@ -76,9 +79,13 @@ def main():
     # Subparser for the put command
     logging.debug("Constructing put subparser")
     put_parser = subparsers.add_parser("put", help="Store a snippet")
-    put_parser.add_argument("name", help="Name of the snippet")
-    put_parser.add_argument("snippet", help="Snippet text")
-    put_parser.add_argument("--hide", help = "Hides snippet from searches/catalog")
+    
+    put_parser.add_argument('--name', action="store", dest="name")
+    put_parser.add_argument('--snippet', action="store", dest="snippet")
+    put_parser.add_argument('--hide', action="store", dest="hidden", default=False)
+    # put_parser.add_argument("name", help="Name of the snippet")
+    # put_parser.add_argument("snippet", help="Snippet text")
+    # put_parser.add_argument("--hide", help = "Hides snippet from searches/catalog", action="store_true")
     
     
     # Subparser for the get command
@@ -90,7 +97,7 @@ def main():
     logging.debug("Constructing catalog subparser")
     catalog_parser = subparsers.add_parser("catalog", help = "List of keywords used to get a snippet")
     
-    #Subparser for search command
+    #Subparser for search commandq
     logging.debug("Searching for string in message")
     search_parser = subparsers.add_parser("search", help = "searches for string in message")
     search_parser.add_argument("name", help = "string you want to search for")
@@ -105,7 +112,7 @@ def main():
     command = arguments.pop("command")
 
     if command == "put":
-        name, snippet, hide = put(**arguments)
+        name, snippet, hidden = put(**arguments)
         print("Stored {!r} as {!r}".format(snippet, name))
     elif command == "get":
         snippet = get(**arguments)
